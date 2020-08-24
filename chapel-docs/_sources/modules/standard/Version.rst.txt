@@ -1,0 +1,238 @@
+.. default-domain:: chpl
+
+.. module:: Version
+   :synopsis: .. highlight:: chapel
+
+Version
+=======
+**Usage**
+
+.. code-block:: chapel
+
+   use Version;
+
+
+or
+
+.. code-block:: chapel
+
+   import Version;
+
+
+
+.. highlight:: chapel
+
+This module contains features that support compile-time reasoning
+about version numbers in general, and Chapel version numbers
+specifically.  In more detail, it features:
+
+* :var:`chplVersion`: the version number of the copy of ``chpl`` used
+  to compile the program.
+
+* two types that can be used to represent version numbers:
+
+  * :type:`semanticVersion` which represents a semantic version value
+
+  * :type:`sourceVersion` which is a semantic version plus a commit value
+
+* :proc:`version`: a utility function for creating new version values
+
+Version types in this module are defined in terms of ``param`` values to
+support compile-time reasoning about versions and code specialization.
+
+The version types support:
+
+* being printed out or cast to a ``param`` string
+
+* compile-time comparisons between version values via ``==``, ``!=``,
+  ``<``, ``<=``, ``>``, and ``>``, including mixed version types.
+  Generally speaking, "less than" corresponds to "is an earlier
+  version than."  For example::
+
+    if chplVersion < version(1,23) then
+      compilerWarning("This package doesn't support 'chpl' prior to 1.23.0");
+
+
+.. data:: const chplVersion
+
+   
+   The version of ``chpl`` used to compile this program.  For an
+   official Chapel release, this will have type
+   :type:`semanticVersion` while for a pre-release, it will have
+   type :type:`sourceVersion`.
+   
+   Note that Chapel ``1.x.y``/``2.x.y`` corresponds to version
+   ``0.x.y``/``1.x.y`` in traditional semantic versioning.
+   
+
+.. function:: proc version(param major: int, param minor: int, param update: int = 0, param commit: string = "")
+
+   
+   A helper function that creates a new version value from its
+   arguments.
+   
+   :arg major: The major version number
+   :type major: `int`
+   
+   :arg minor: The minor version number
+   :type minor: `int`
+   
+   :arg update: The optional update version number (defaults to 0)
+   :type update: `int`
+   
+   :arg commit: The optional commit ID (defaults to "")
+   :type commit: `string`
+   
+   :returns: A new version value.  If ``commit == ""``, this routine
+             returns a value of type :type:`semanticVersion`
+             otherwise it returns a value of type
+             :type:`sourceVersion`.
+   
+
+.. record:: semanticVersion
+
+   
+   This record represents a semantic version value.  It uses
+   ``param`` values to represent its components in order to support
+   compile-time comparison of version numbers which in turn permits
+   code to specialize to specific versions of Chapel.  When printed
+   or converted to a string, it is represented as ``version
+   major.minor.update``.
+   
+
+
+   .. attribute:: param major: int
+
+      The major version number.  For version ``2.0.1``, this would be
+      ``2``. 
+
+   .. attribute:: param minor: int
+
+      The minor version number.  For version ``2.0.1``, this would be
+      ``0``. 
+
+   .. attribute:: param update: int
+
+      The update version number.  For version ``2.0.1``, this would
+      be ``1``. 
+
+.. record:: sourceVersion
+
+   
+   This record represents a software version in a Git repository.  It
+   uses ``param`` values to represent its components in order to
+   support compile-time comparison of version numbers which in turn
+   permits code to specialize to specific versions of Chapel.  When
+   printed or converted to a string, it is represented as ``version
+   major.minor.update (commit)``.
+   
+   Note that ordered comparisons between two :type:`sourceVersion`
+   values with identical semantic versions are not supported due to
+   the challenges involved in ordering commit values.  Moreover, when
+   a :type:`semanticVersion` is compared with a :type:`sourceVersion`
+   that has the identical semantic version, the :type:`sourceVersion`
+   value is considered to be less than the :type:`semanticVersion`
+   using the model that it represents a pre-release of the official
+   release represented by the semantic version.
+   
+
+
+   .. attribute:: const version: semanticVersion(?)
+
+      The semantic version portion of the version number. 
+
+   .. attribute:: param commit: string
+
+      The commit ID of the version (e.g., a git SHA) 
+
+.. function:: proc ==(v1: semanticVersion(?), v2: semanticVersion(?)) param: bool
+
+.. function:: proc !=(v1: semanticVersion(?), v2: semanticVersion(?)) param: bool
+
+   
+   Equality/inequality operators between two values of type
+   :type:`semanticVersion` check whether or not the two values
+   have identical major, minor, and update values.
+   
+
+.. function:: proc <(v1: semanticVersion(?), v2: semanticVersion(?)) param: bool
+
+.. function:: proc <=(v1: semanticVersion(?), v2: semanticVersion(?)) param: bool
+
+.. function:: proc >(v1: semanticVersion(?), v2: semanticVersion(?)) param: bool
+
+.. function:: proc >=(v1: semanticVersion(?), v2: semanticVersion(?)) param: bool
+
+   
+   Ordered comparisons between two values of type
+   :type:`semanticVersion` are based on the lexical ordering of each
+   value's ``major.minor.update`` value, reflecting an "was released
+   before/after" relationship.
+   
+
+.. function:: proc ==(v1: sourceVersion(?), v2: sourceVersion(?)) param: bool
+
+.. function:: proc !=(v1: sourceVersion(?), v2: sourceVersion(?)) param: bool
+
+   
+   Equality/inequality operators between two values of type
+   :type:`sourceVersion` check whether or not the two values
+   have identical major, minor, update, and commit values.
+   
+
+.. function:: proc <(v1: sourceVersion(?), v2: sourceVersion(?)) param: bool
+
+.. function:: proc <=(v1: sourceVersion(?), v2: sourceVersion(?)) param: bool
+
+.. function:: proc >(v1: sourceVersion(?), v2: sourceVersion(?)) param: bool
+
+.. function:: proc >=(v1: sourceVersion(?), v2: sourceVersion(?)) param: bool
+
+   
+   Ordered comparisons between two values of type
+   :type:`sourceVersion` are based on the ordering of the semantic
+   versions of the two values.  If the two values have identical
+   semantic versions, any cases that rely on an ordering of the
+   commits will generate a compile-time error due to the challenge of
+   ordering commits at compile-time.
+   
+
+.. function:: proc ==(v1: semanticVersion(?), v2: sourceVersion(?)) param: bool
+
+.. function:: proc !=(v1: semanticVersion(?), v2: sourceVersion(?)) param: bool
+
+.. function:: proc ==(v1: sourceVersion(?), v2: semanticVersion(?)) param: bool
+
+.. function:: proc !=(v1: sourceVersion(?), v2: semanticVersion(?)) param: bool
+
+   
+   Equality/inequality comparisons between mixed values of type
+   :type:`semanticVersion` and :type:`sourceVersion` always return
+   ``false`` for ``==`` and ``true`` for ``!=``.
+   
+
+.. function:: proc <(v1: semanticVersion(?), v2: sourceVersion(?)) param: bool
+
+.. function:: proc <=(v1: semanticVersion(?), v2: sourceVersion(?)) param: bool
+
+.. function:: proc >(v1: semanticVersion(?), v2: sourceVersion(?)) param: bool
+
+.. function:: proc >=(v1: semanticVersion(?), v2: sourceVersion(?)) param: bool
+
+.. function:: proc <(v1: sourceVersion(?), v2: semanticVersion(?)) param: bool
+
+.. function:: proc <=(v1: sourceVersion(?), v2: semanticVersion(?)) param: bool
+
+.. function:: proc >(v1: sourceVersion(?), v2: semanticVersion(?)) param: bool
+
+.. function:: proc >=(v1: sourceVersion(?), v2: semanticVersion(?)) param: bool
+
+   
+   Ordered comparisons between mixed values of type
+   :type:`semanticVersion` and :type:`sourceVersion` are based on the
+   ordering of the semantic versions of the two values.  If the
+   two values have identical semantic versions, the
+   :type:`sourceVersion` value is considered less than the
+   :type:`semanticVersion` value.
+   
+
